@@ -19,6 +19,12 @@ BATCH_ADD_SIZE: int = 100
 ALBUMS_INCLUDE_GROUPS: list[str] = ["album", "single", "appears_on", "compilation"]
 """Default album groups to fetch for each artist."""
 
+CACHE_FILE_NAME: str = ".artist_sync_cache.json"
+"""Local cache file to store album track lists and avoid redundant API calls."""
+
+REQUEST_DELAY: float = 0.5
+"""Delay (seconds) between processing different artists to avoid rate limits."""
+
 SPOTIFY_SCOPES: str = (
     "user-follow-read "
     "playlist-read-private "

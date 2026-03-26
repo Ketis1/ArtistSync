@@ -7,6 +7,7 @@ validate artist↔track → deduplicate → diff with existing → add new.
 from __future__ import annotations
 
 import logging
+import time
 
 from rich.progress import (
     BarColumn,
@@ -17,7 +18,8 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from artist_sync.config import ALBUMS_INCLUDE_GROUPS
+from artist_sync.cache import AlbumCache
+from artist_sync.config import ALBUMS_INCLUDE_GROUPS, REQUEST_DELAY
 from artist_sync.models import SyncResult
 from artist_sync.playlist_manager import PlaylistManager
 from artist_sync.spotify_client import SpotifyClient
@@ -64,6 +66,7 @@ def sync(
     """
     groups = include_groups or ALBUMS_INCLUDE_GROUPS
     result = SyncResult()
+    cache = AlbumCache()
 
     # ------------------------------------------------------------------
     # 1. Fetch followed artists
@@ -107,6 +110,14 @@ def sync(
                 result.albums_scanned += 1
                 album_id: str = album["id"]
 
+                # Check cache first
+                cached_track_ids = cache.get_tracks(album_id)
+                if cached_track_ids is not None:
+                    # In cache - no API call needed for tracks
+                    all_track_ids.update(cached_track_ids)
+                    continue
+
+                # Not in cache - fetch from API
                 try:
                     tracks = client.get_album_tracks(album_id)
                 except Exception as exc:
@@ -115,6 +126,8 @@ def sync(
                     result.errors.append(msg)
                     continue
 
+                # Store result in set and cache
+                current_album_track_ids: list[str] = []
                 for track in tracks:
                     track_id = track.get("id")
                     if not track_id:
@@ -123,8 +136,20 @@ def sync(
                     track_artist_ids = {a["id"] for a in track.get("artists", [])}
                     if artist_id in track_artist_ids:
                         all_track_ids.add(track_id)
+                        current_album_track_ids.append(track_id)
+                
+                cache.set_tracks(album_id, current_album_track_ids)
+                
+                # Small delay after each REAL API call for album tracks
+                time.sleep(0.1)
 
+            # Persist cache periodically
+            cache.save()
             progress.advance(task)
+
+            # Throttling to avoid rate limits
+            if REQUEST_DELAY > 0:
+                time.sleep(REQUEST_DELAY)
 
     result.tracks_found = len(all_track_ids)
     logger.info("Unique tracks after validation & dedup: %d", len(all_track_ids))
