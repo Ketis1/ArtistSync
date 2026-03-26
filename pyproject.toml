@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "artist-sync"
+version = "0.1.0"
+description = "Sync all tracks from your followed Spotify artists into playlists"
+requires-python = ">=3.12"
+dependencies = [
+    "spotipy>=2.26.0",
+    "click>=8.1",
+    "python-dotenv>=1.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.14",
+]
+
+[project.scripts]
+artist-sync = "artist_sync.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
