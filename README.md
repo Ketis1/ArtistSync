@@ -44,6 +44,21 @@ ArtistSync is a command-line tool that automatically synchronizes the complete d
    ```
    - This will open a browser for authorization.
    - After success, a `.cache` file will be created.
+    
+## ⚠️ Rate Limits & Best Practices
+
+Spotify's API imposes strict rate limits, especially for personal/development apps. Fetching the full discography of many artists (100+) can trigger a **24-hour block** if done too aggressively.
+
+### Recommendations for First Run:
+1.  **Use Exclusion Flags**: Always use `--exclude-appears-on --exclude-compilations` for your first full sync. The `appears_on` category (guest appearances) is the main cause of thousands of redundant API calls.
+2.  **Incremental Sync**: Build your local cache gradually using the `--artists-limit` flag:
+    ```bash
+    # Sync first 20 artists to build cache safely
+    artist-sync sync "My Collection" --exclude-appears-on --artists-limit 20
+    ```
+3.  **Local Caching**: The tool automatically saves processed albums to `.artist_sync_cache.json`. Subsequent runs for the same artists will be **90% faster** and won't consume your API quota for already-scanned albums.
+
+---
 
 ## Usage
 
